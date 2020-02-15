@@ -9,7 +9,7 @@ import sys
 
 from catkin_pkg.changelog import CHANGELOG_FILENAME
 from catkin_pkg.changelog_generator import generate_changelog_file, generate_changelogs, get_all_changes, get_forthcoming_changes, update_changelogs
-from catkin_pkg.changelog_generator_vcs import get_vcs_client
+from catkin_pkg.changelog_generator_vcs import get_vcs_client, Tag
 from catkin_pkg.packages import find_packages
 
 try:
@@ -37,6 +37,10 @@ def prompt_continue(msg, default):
 
         print("Response '%s' was not recognized, please use one of the following options: y, Y, n, N" % response, file=sys.stderr)
 
+def check_tag_prefix(prefix):
+    potential_tag = Tag(prefix + '1.2.3')
+    if potential_tag.version() != '1.2.3':
+        raise argparse.ArgumentTypeError("prefix '%s' is not separable from the version string" % prefix)
 
 def main(sysargs=None):
     parser = argparse.ArgumentParser(description='Generate a REP-0132 %s' % CHANGELOG_FILENAME)
@@ -56,8 +60,8 @@ def main(sysargs=None):
         '-y', '--non-interactive', action='store_true', default=False,
         help="Run without user interaction, confirming all questions with 'yes'")
     parser.add_argument(
-        '-t', '--tag-prefix', default='',
-        help="Release tag prefix such as 'ros/' ie. ros/X.Y.Z (works with prepare_release's release tag prefix)")
+        '-t', '--tag-prefix', default='', type=check_tag_prefix,
+        help="Release tag prefix such as 'ros/' ie. ros/3.1.4 (works with prepare_release's release tag prefix)")
     args = parser.parse_args(sysargs)
 
     base_path = '.'

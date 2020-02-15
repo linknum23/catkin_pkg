@@ -51,12 +51,20 @@ except ImportError:
                 return file_path
         return None
 
+VERSION = re.compile(r'\d+\.\d+.\d+$')
 
 class Tag(object):
 
     def __init__(self, name, timestamp=None):
         self.name = name
         self.timestamp = timestamp
+
+    def version(self):
+        match = re.search(VERSION, self.name)
+        return match.group(0) if match else None
+
+    def prefix(self):
+        return re.sub(VERSION, '', self.name)
 
 
 class LogEntry(object):
