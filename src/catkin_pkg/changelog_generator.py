@@ -47,9 +47,14 @@ from catkin_pkg.changelog_generator_vcs import Tag
 
 FORTHCOMING_LABEL = 'Forthcoming'
 
+def sanitize_tag_name(name, prefix):
+    if name is None:
+        return None
+    else:
+        return name.replace(prefix,'')
 
-def get_all_changes(vcs_client, skip_merges=False):
-    tags = _get_version_tags(vcs_client)
+def get_all_changes(vcs_client, skip_merges=False, tag_prefix=''):
+    tags = _get_version_tags(vcs_client, tag_prefix)
 
     # query all log entries per tag range
     tag2log_entries = {}
@@ -65,9 +70,9 @@ def get_all_changes(vcs_client, skip_merges=False):
     return tag2log_entries
 
 
-def get_forthcoming_changes(vcs_client, skip_merges=False):
-    tags = _get_version_tags(vcs_client)
-    latest_tag_name = _get_latest_version_tag_name(vcs_client)
+def get_forthcoming_changes(vcs_client, skip_merges=False, tag_prefix=''):
+    tags = _get_version_tags(vcs_client, tag_prefix)
+    latest_tag_name = _get_latest_version_tag_name(vcs_client, tag_prefix)
 
     # query log entries since latest tag only
     tag2log_entries = {}
@@ -83,28 +88,26 @@ def get_forthcoming_changes(vcs_client, skip_merges=False):
     tag2log_entries[from_tag] = log_entries
     return tag2log_entries
 
-def _is_tag(name):
-    return re.match(r'^\d+\.\d+.\d+$', name) is not None or re.match(r'^ros/\d+\.\d+.\d+$', name) is not None # LJL: added dataspeed style ros/x.y.z format
+def _is_tag(name, prefix):
+    return re.match(r'^' + prefix + r'\d+\.\d+.\d+$', name) is not None
 
-def _get_version_tags(vcs_client):
+def _get_version_tags(vcs_client, prefix):
     # get all tags in descending order
     tags = vcs_client.get_tags()
-    version_tags = [t for t in tags if _is_tag(t.name)]
+    version_tags = [t for t in tags if _is_tag(t.name, prefix)]
     return version_tags
 
 
-def _get_latest_version_tag_name(vcs_client):
+def _get_latest_version_tag_name(vcs_client, tag_prefix):
     # get latest tag
     tag_name = vcs_client.get_latest_tag_name()
-    if not _is_tag(tag_name):
+    if not _is_tag(tag_name, tag_prefix):
         raise RuntimeError(
-            "The tag name '{}' doesn't match the version pattern x.y.z or ros/x.y.z".format(tag_name))
-    else:
-        print("using tag '{}'".format(tag_name))
+            "The tag name '{}' doesn't match the version pattern {}x.y.z".format(tag_name, tag_prefix))
     return tag_name
 
 
-def generate_changelogs(base_path, packages, tag2log_entries, logger=None, vcs_client=None, skip_contributors=False):
+def generate_changelogs(base_path, packages, tag2log_entries, logger=None, vcs_client=None, skip_contributors=False, tag_prefix=''):
     for pkg_path, package in packages.items():
         changelog_path = os.path.join(base_path, pkg_path, CHANGELOG_FILENAME)
         if os.path.exists(changelog_path):
@@ -113,12 +116,12 @@ def generate_changelogs(base_path, packages, tag2log_entries, logger=None, vcs_c
         if logger:
             logger.debug("- creating '%s'" % os.path.join(pkg_path, CHANGELOG_FILENAME))
         pkg_tag2log_entries = filter_package_changes(tag2log_entries, pkg_path)
-        data = generate_changelog_file(package.name, pkg_tag2log_entries, vcs_client=vcs_client, skip_contributors=skip_contributors)
+        data = generate_changelog_file(package.name, pkg_tag2log_entries, vcs_client=vcs_client, skip_contributors=skip_contributors, tag_prefix=tag_prefix)
         with open(changelog_path, 'wb') as f:
             f.write(data.encode('utf-8'))
 
 
-def update_changelogs(base_path, packages, tag2log_entries, logger=None, vcs_client=None, skip_contributors=False):
+def update_changelogs(base_path, packages, tag2log_entries, logger=None, vcs_client=None, skip_contributors=False, tag_prefix=''):
     for pkg_path in packages.keys():
         # update package specific changelog file
         if logger:
@@ -127,7 +130,7 @@ def update_changelogs(base_path, packages, tag2log_entries, logger=None, vcs_cli
         changelog_path = os.path.join(base_path, pkg_path, CHANGELOG_FILENAME)
         with open(changelog_path, 'rb') as f:
             data = f.read().decode('utf-8')
-        data = update_changelog_file(data, pkg_tag2log_entries, vcs_client=vcs_client, skip_contributors=skip_contributors)
+        data = update_changelog_file(data, pkg_tag2log_entries, vcs_client=vcs_client, skip_contributors=skip_contributors, tag_prefix=tag_prefix)
         with open(changelog_path, 'wb') as f:
             f.write(data.encode('utf-8'))
 
@@ -147,25 +150,20 @@ def filter_package_changes(tag2log_entries, pkg_path):
     return pkg_tag2log_entries
 
 
-def generate_changelog_file(pkg_name, tag2log_entries, vcs_client=None, skip_contributors=False):
+def generate_changelog_file(pkg_name, tag2log_entries, vcs_client=None, skip_contributors=False, tag_prefix=''):
     blocks = []
     blocks.append(generate_package_headline(pkg_name))
 
     for tag in sorted_tags(tag2log_entries.keys()):
         log_entries = tag2log_entries[tag]
         if log_entries is not None:
-            blocks.append(generate_version_block(tag.name.replace('ros/',''), tag.timestamp, log_entries, vcs_client=vcs_client, skip_contributors=skip_contributors))
+            simple_tag = sanitize_tag_name(tag.name, tag_prefix)
+            blocks.append(generate_version_block(simple_tag, tag.timestamp, log_entries, vcs_client=vcs_client, skip_contributors=skip_contributors))
 
     return '\n'.join(blocks)
 
-def sanitize_tag_name(name):
-    if name is None:
-        return None
-    else:
-        return name.replace('ros/','')
-
-def update_changelog_file(data, tag2log_entries, vcs_client=None, skip_contributors=False):
-    tags = sorted_tags(tag2log_entries.keys())
+def update_changelog_file(data, tag2log_entries, vcs_client=None, skip_contributors=False, tag_prefix=''):
+    tags = sorted_tags(tag2log_entries.keys(), tag_prefix)
     for i, tag in enumerate(tags):
         log_entries = tag2log_entries[tag]
         if log_entries is None:
@@ -173,24 +171,25 @@ def update_changelog_file(data, tag2log_entries, vcs_client=None, skip_contribut
         content = generate_version_content(log_entries, vcs_client=vcs_client, skip_contributors=skip_contributors)
 
         # check if version section exists
-        match = get_version_section_match(data, sanitize_tag_name(tag.name))
+        match = get_version_section_match(data, sanitize_tag_name(tag.name, tag_prefix))
         if match:
             # prepend content to existing section
-            data = prepend_version_content(data, sanitize_tag_name(tag.name), content)
+            data = prepend_version_content(data, sanitize_tag_name(tag.name, tag_prefix), content)
             assert data is not None
         else:
             # find injection point of earliest following version
             for next_tag in list(tags)[i:]:
-                match = get_version_section_match(data, sanitize_tag_name(next_tag.name))
+                match = get_version_section_match(data, sanitize_tag_name(next_tag.name, tag_prefix))
                 if match:
-                    block = generate_version_block(sanitize_tag_name(tag.name), tag.timestamp, log_entries, vcs_client=vcs_client, skip_contributors=skip_contributors)
+                    tag_name = sanitize_tag_name(tag.name, tag_prefix)
+                    block = generate_version_block(tag_name, tag.timestamp, log_entries, vcs_client=vcs_client, skip_contributors=skip_contributors)
                     data = data[:match.start()] + block + '\n' + data[match.start():]
                     break
             if not match:
                 if tag.name is None:
-                    raise RuntimeError('Could not find section "%s"' % sanitize_tag_name(next_tag.name))
+                    raise RuntimeError('Could not find section "%s"' % sanitize_tag_name(next_tag.name, tag_prefix))
                 else:
-                    raise RuntimeError('Could neither find section "%s" nor any other section' % sanitize_tag_name(tag.name))
+                    raise RuntimeError('Could neither find section "%s" nor any other section' % sanitize_tag_name(tag.name, tag_prefix))
         return data
 
 
@@ -227,14 +226,14 @@ def prepend_version_content(data, version, content):
     return data if count == 1 else None
 
 
-def sorted_tags(tags):
+def sorted_tags(tags, tag_prefix=''):
     # first return the forthcoming tag
     for tag in tags:
         if not tag.name:
             yield tag
     # then return the tags in descending order
     name_and_tag = [(t.name, t) for t in tags if t.name]
-    name_and_tag.sort(key=lambda x: [int(y) for y in x[0].replace('ros/','').split('.')])
+    name_and_tag.sort(key=lambda x: [int(y) for y in sanitize_tag_name(x[0], tag_prefix).split('.')])
     name_and_tag.reverse()
     for (_, tag) in name_and_tag:
         yield tag

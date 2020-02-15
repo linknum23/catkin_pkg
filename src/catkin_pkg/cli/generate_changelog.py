@@ -55,6 +55,9 @@ def main(sysargs=None):
     parser.add_argument(
         '-y', '--non-interactive', action='store_true', default=False,
         help="Run without user interaction, confirming all questions with 'yes'")
+    parser.add_argument(
+        '-t', '--tag-prefix', default='',
+        help="Release tag prefix such as 'ros/' ie. ros/X.Y.Z (works with prepare_release's release tag prefix)")
     args = parser.parse_args(sysargs)
 
     base_path = '.'
@@ -73,7 +76,7 @@ def main(sysargs=None):
             tag2log_entries = get_forthcoming_changes(vcs_client, skip_merges=args.skip_merges)
             print('Generating changelog files with forthcoming version...', file=sys.stderr)
         print('', file=sys.stderr)
-        data = generate_changelog_file('repository-level', tag2log_entries, vcs_client=vcs_client)
+        data = generate_changelog_file('repository-level', tag2log_entries, vcs_client=vcs_client, skip_contributors=False, tag_prefix=args.tag_prefix)
         print(data)
         return 0
 
@@ -108,7 +111,7 @@ def main(sysargs=None):
         print('Querying all tags and commit information...')
         tag2log_entries = get_all_changes(vcs_client, skip_merges=args.skip_merges)
         print('Generating changelog files with all versions...')
-        generate_changelogs(base_path, packages, tag2log_entries, logger=logging, vcs_client=vcs_client, skip_contributors=args.skip_contributors)
+        generate_changelogs(base_path, packages, tag2log_entries, logger=logging, vcs_client=vcs_client, skip_contributors=args.skip_contributors, tag_prefix=args.tag_prefix)
     else:
         print('Querying commit information since latest tag...')
         tag2log_entries = get_forthcoming_changes(vcs_client, skip_merges=args.skip_merges)
@@ -116,11 +119,11 @@ def main(sysargs=None):
         packages_without = {pkg_path: package for pkg_path, package in packages.items() if package.name in missing_changelogs}
         if packages_without:
             print('Generating changelog files with forthcoming version...')
-            generate_changelogs(base_path, packages_without, tag2log_entries, logger=logging, vcs_client=vcs_client, skip_contributors=args.skip_contributors)
+            generate_changelogs(base_path, packages_without, tag2log_entries, logger=logging, vcs_client=vcs_client, skip_contributors=args.skip_contributors, tag_prefix=args.tag_prefix)
         packages_with = {pkg_path: package for pkg_path, package in packages.items() if package.name not in missing_changelogs}
         if packages_with:
             print('Updating forthcoming section of changelog files...')
-            update_changelogs(base_path, packages_with, tag2log_entries, logger=logging, vcs_client=vcs_client, skip_contributors=args.skip_contributors)
+            update_changelogs(base_path, packages_with, tag2log_entries, logger=logging, vcs_client=vcs_client, skip_contributors=args.skip_contributors, tag_prefix=args.tag_prefix)
     print('Done.')
     print('Please review the extracted commit messages and consolidate the changelog entries before committing the files!')
 
