@@ -41,6 +41,8 @@ def check_tag_prefix(prefix):
     potential_tag = Tag(prefix + '1.2.3')
     if potential_tag.version() != '1.2.3':
         raise argparse.ArgumentTypeError("prefix '%s' is not separable from the version string" % prefix)
+    else:
+        return prefix
 
 def main(sysargs=None):
     parser = argparse.ArgumentParser(description='Generate a REP-0132 %s' % CHANGELOG_FILENAME)

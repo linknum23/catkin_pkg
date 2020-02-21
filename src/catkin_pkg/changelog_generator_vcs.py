@@ -60,8 +60,11 @@ class Tag(object):
         self.timestamp = timestamp
 
     def version(self):
-        match = re.search(VERSION, self.name)
-        return match.group(0) if match else None
+        if self.name:
+            match = re.search(VERSION, self.name)
+            return match.group(0) if match else None
+        else:
+            return None
 
     def prefix(self):
         return re.sub(VERSION, '', self.name)
@@ -178,9 +181,7 @@ class GitClient(VcsClientBase):
         return tags
 
     def get_latest_tag_name(self, tag_prefix=''):
-        cmd_describe = [self._executable, 'describe', '--abbrev=0', '--tags']
-        if len(tag_prefix) > 0:
-            cmd_describe += ['--match', tag_prefix]
+        cmd_describe = [self._executable, 'describe', '--abbrev=0', '--tags', '--match', tag_prefix + '*']
         result_describe = self._run_command(cmd_describe)
         if result_describe['returncode']:
             raise RuntimeError('Could not fetch latest tag:\n%s' % result_describe['output'])
