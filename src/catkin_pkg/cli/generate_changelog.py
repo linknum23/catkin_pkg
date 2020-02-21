@@ -113,12 +113,12 @@ def main(sysargs=None):
 
     if args.all:
         print('Querying all tags and commit information...')
-        tag2log_entries = get_all_changes(vcs_client, skip_merges=args.skip_merges)
+        tag2log_entries = get_all_changes(vcs_client, skip_merges=args.skip_merges, tag_prefix=args.tag_prefix)
         print('Generating changelog files with all versions...')
         generate_changelogs(base_path, packages, tag2log_entries, logger=logging, vcs_client=vcs_client, skip_contributors=args.skip_contributors, tag_prefix=args.tag_prefix)
     else:
         print('Querying commit information since latest tag...')
-        tag2log_entries = get_forthcoming_changes(vcs_client, skip_merges=args.skip_merges)
+        tag2log_entries = get_forthcoming_changes(vcs_client, skip_merges=args.skip_merges, tag_prefix=args.tag_prefix)
         # separate packages with/without a changelog file
         packages_without = {pkg_path: package for pkg_path, package in packages.items() if package.name in missing_changelogs}
         if packages_without:

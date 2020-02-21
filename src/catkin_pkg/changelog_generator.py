@@ -84,7 +84,7 @@ def get_forthcoming_changes(vcs_client, skip_merges=False, tag_prefix=''):
 
 
 def _is_valid_tag(tag, prefix):
-    return prefix in tag.prefix() and tag.version()
+    return prefix == tag.prefix() and tag.version()
 
 
 def _get_version_tags(vcs_client, tag_prefix):

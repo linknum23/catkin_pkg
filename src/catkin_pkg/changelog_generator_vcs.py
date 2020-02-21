@@ -93,7 +93,7 @@ class VcsClientBase(object):
     def get_tags(self):
         raise NotImplementedError()
 
-    def get_latest_tag_name(self):
+    def get_latest_tag_name(self, tag_prefix=''):
         raise NotImplementedError()
 
     def get_log_entries(self, from_tag, to_tag, skip_merges=False):
@@ -177,8 +177,10 @@ class GitClient(VcsClientBase):
         self._truncate_timestamps(tags)
         return tags
 
-    def get_latest_tag_name(self):
+    def get_latest_tag_name(self, tag_prefix=''):
         cmd_describe = [self._executable, 'describe', '--abbrev=0', '--tags']
+        if len(tag_prefix) > 0:
+            cmd_describe += ['--match', tag_prefix]
         result_describe = self._run_command(cmd_describe)
         if result_describe['returncode']:
             raise RuntimeError('Could not fetch latest tag:\n%s' % result_describe['output'])
@@ -299,7 +301,9 @@ class HgClient(VcsClientBase):
         self._truncate_timestamps(tags)
         return tags
 
-    def get_latest_tag_name(self):
+    def get_latest_tag_name(self, tag_prefix=''):
+        if len(tag_prefix) > 0:
+            raise RuntimeError('Tag prefixes are not yet supprted in Mercurial')
         cmd_log = [self._executable, 'log', '--rev', '.', '--template', '{latesttag}']
         result_log = self._run_command(cmd_log)
         if result_log['returncode']:
