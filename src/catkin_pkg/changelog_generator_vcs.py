@@ -303,9 +303,7 @@ class HgClient(VcsClientBase):
         return tags
 
     def get_latest_tag_name(self, tag_prefix=''):
-        if len(tag_prefix) > 0:
-            raise RuntimeError('Tag prefixes are not yet supprted in Mercurial')
-        cmd_log = [self._executable, 'log', '--rev', '.', '--template', '{latesttag}']
+        cmd_log = [self._executable, 'log', '--rev', '.', '--template', "{latesttag(r're:" + tag_prefix + ".*')}"]
         result_log = self._run_command(cmd_log)
         if result_log['returncode']:
             raise RuntimeError('Could not fetch latest tag:\n%s' % result_log['output'])
