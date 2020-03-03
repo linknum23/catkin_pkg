@@ -96,7 +96,7 @@ def _get_version_tags(vcs_client, tag_prefix):
 
 def _get_latest_version_tag_name(vcs_client, tag_prefix):
     # get latest tag
-    tag_name = vcs_client.get_latest_tag_name()
+    tag_name = vcs_client.get_latest_tag_name(tag_prefix)
     if not _is_valid_tag(Tag(tag_name), tag_prefix):
         raise RuntimeError(
             "The tag name '{}' doesn't match the version pattern {}x.y.z".format(tag_name, tag_prefix))
