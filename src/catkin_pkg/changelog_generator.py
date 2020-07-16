@@ -154,7 +154,8 @@ def generate_changelog_file(pkg_name, tag2log_entries, vcs_client=None, skip_con
     for tag in sorted_tags(tag2log_entries.keys()):
         log_entries = tag2log_entries[tag]
         if log_entries is not None:
-            blocks.append(generate_version_block(tag.name.replace('ros/',''), tag.timestamp, log_entries, vcs_client=vcs_client, skip_contributors=skip_contributors))
+            tag_name = tag.name.replace('ros/','') if tag.name is not None else tag.name
+            blocks.append(generate_version_block(tag_name, tag.timestamp, log_entries, vcs_client=vcs_client, skip_contributors=skip_contributors))
 
     return '\n'.join(blocks)
 
@@ -233,7 +234,7 @@ def sorted_tags(tags):
         if not tag.name:
             yield tag
     # then return the tags in descending order
-    name_and_tag = [(t.name, t) for t in tags if t.name]
+    name_and_tag = [(t.name, t) for t in tags if t.name is not None and t.name.startswith('ros/')]
     name_and_tag.sort(key=lambda x: [int(y) for y in x[0].replace('ros/','').split('.')])
     name_and_tag.reverse()
     for (_, tag) in name_and_tag:

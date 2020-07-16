@@ -170,7 +170,7 @@ class GitClient(VcsClientBase):
         return tags
 
     def get_latest_tag_name(self):
-        cmd_describe = [self._executable, 'describe', '--abbrev=0', '--tags']
+        cmd_describe = [self._executable, 'describe', '--abbrev=0', '--tags', '--match', 'ros/*']
         result_describe = self._run_command(cmd_describe)
         if result_describe['returncode']:
             raise RuntimeError('Could not fetch latest tag:\n%s' % result_describe['output'])
